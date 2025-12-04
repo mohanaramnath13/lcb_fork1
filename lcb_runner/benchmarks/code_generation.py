@@ -57,9 +57,9 @@ class CodeGenerationProblem:
         self.platform = Platform(self.platform)
         self.difficulty = Difficulty(self.difficulty)
 	if self.contest_date is not None and isinstance(self.contest_date, str):
-        	self.contest_date = datetime.fromisoformat(self.contest_date)
+            self.contest_date = datetime.fromisoformat(self.contest_date)
     	else:
-        	self.contest_date = None
+            self.contest_date = None
         #self.contest_date = datetime.fromisoformat(self.contest_date)
 
         self.public_test_cases = json.loads(self.public_test_cases)  # type: ignore
