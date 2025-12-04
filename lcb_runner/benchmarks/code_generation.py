@@ -56,12 +56,10 @@ class CodeGenerationProblem:
     def __post_init__(self):
         self.platform = Platform(self.platform)
         self.difficulty = Difficulty(self.difficulty)
-	if self.contest_date is not None and isinstance(self.contest_date, str):
+        if self.contest_date is not None and isinstance(self.contest_date, str):
             self.contest_date = datetime.fromisoformat(self.contest_date)
-    	else:
+        else:
             self.contest_date = None
-        #self.contest_date = datetime.fromisoformat(self.contest_date)
-
         self.public_test_cases = json.loads(self.public_test_cases)  # type: ignore
         self.public_test_cases = [Test(**t) for t in self.public_test_cases]
 
@@ -86,7 +84,7 @@ class CodeGenerationProblem:
             "platform": self.platform.value,
             "question_id": self.question_id,
             "contest_id": self.contest_id,
-            "contest_date": self.contest_date.isoformat(),
+            "contest_date": self.contest_date.isoformat() if self.contest_date is not None else None,
             "starter_code": self.starter_code,
             "difficulty": self.difficulty.value,
             "output_list": output_list,
@@ -128,13 +126,13 @@ class CodeGenerationProblem:
 def load_code_generation_dataset(release_version="release_v5", start_date=None, end_date=None) -> list[CodeGenerationProblem]:
     dataset = load_dataset("livecodebench/code_generation", split="test", revision=release_version)
     dataset = [CodeGenerationProblem(**p) for p in dataset]  # type: ignore
-    if start_date is not None:
-        p_start_date = datetime.strptime(start_date, "%Y-%m-%d")
-        dataset = [e for e in dataset if p_start_date <= e.contest_date]
-
-    if end_date is not None:
-        p_end_date = datetime.strptime(end_date, "%Y-%m-%d")
-        dataset = [e for e in dataset if e.contest_date <= p_end_date]
+#    if start_date is not None:
+#        p_start_date = datetime.strptime(start_date, "%Y-%m-%d")
+#        dataset = [e for e in dataset if p_start_date <= e.contest_date]
+#
+#    if end_date is not None:
+#        p_end_date = datetime.strptime(end_date, "%Y-%m-%d")
+#        dataset = [e for e in dataset if e.contest_date <= p_end_date]
 
     print(f"Loaded {len(dataset)} problems")
     return dataset
