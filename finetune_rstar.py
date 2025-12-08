@@ -4,31 +4,25 @@ from datasets import load_dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForCausalLM,
-    TrainingArguments,
 )
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 
 # --- 1. CONFIGURATION ---
 MODEL_NAME = "Qwen/Qwen2.5-Coder-7B-Instruct"
 OUTPUT_DIR = "Qwen2.5-Coder-7B-rStar-Full"
 
 # --- 2. LOAD DATASET ---
-print("Loading microsoft/rStar-Coder dataset...")
+print("Loading microsoft/rStar-Coder (synthetic_sft)...")
 dataset = load_dataset("microsoft/rStar-Coder", "synthetic_sft", split="train")
-#dataset = load_dataset("microsoft/rStar-Coder", split="train")
 
 def format_rstar_to_chat(row):
     # --- A. Prepare User Prompt ---
-    # Start with the main question
     user_content = row['question']
     
-    # If starter code exists, append it so the model knows where to start
     if row.get('starter_code') and len(str(row['starter_code'])) > 0:
         user_content += f"\n\nHere is the starter code:\n```python\n{row['starter_code']}\n```"
 
     # --- B. Prepare Assistant Response ---
-    # CRITICAL STEP: Combine "Thinking" (response) with "Doing" (code)
-    # This teaches the model to reason first, then output the solution.
     assistant_content = f"{row['response']}\n\nHere is the solution:\n```python\n{row['code']}\n```"
     
     messages = [
@@ -37,21 +31,26 @@ def format_rstar_to_chat(row):
         {"role": "assistant", "content": assistant_content}
     ]
     
-    # SFTTrainer expects a 'messages' column
     return {"messages": messages}
 
-print("Formatting dataset with correct columns...")
+print("Formatting dataset...")
 dataset = dataset.map(format_rstar_to_chat)
 
-# --- 3. TRAINING ARGUMENTS ---
-training_args = TrainingArguments(
+# --- 3. TRAINING ARGUMENTS (SFTConfig) ---
+# We use SFTConfig but with YOUR specific metrics
+training_args = SFTConfig(
     output_dir=OUTPUT_DIR,
-    num_train_epochs=5,
-    per_device_train_batch_size=1,  # DeepSpeed will shard this
-    gradient_accumulation_steps=4,  # Total batch size = 32
+    dataset_text_field="messages",
+    max_seq_length=4096,
+    packing=False,
+    
+    # --- YOUR REQUESTED METRICS ---
+    num_train_epochs=5,             # Increased to 5
+    per_device_train_batch_size=1,  # Decreased to 1 (Effective batch = 1 * 4 * 2 GPUs = 8)
+    gradient_accumulation_steps=4,
     learning_rate=2e-5,
     weight_decay=0.01,
-    bf16=True,                      # Use A40's native bfloat16
+    bf16=True,
     logging_steps=10,
     save_strategy="steps",
     save_steps=100,
@@ -62,15 +61,14 @@ training_args = TrainingArguments(
 )
 
 # --- 4. LOAD MODEL ---
-# Note: No device_map="auto" because DeepSpeed manages placement
 print(f"Loading Model: {MODEL_NAME}...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 tokenizer.pad_token = tokenizer.eos_token
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    use_cache=True,
-    attn_implementation="sdpa",
+    use_cache=False,                # MUST be False if gradient_checkpointing=True
+    attn_implementation="sdpa",     # Using SDPA as requested
     torch_dtype=torch.bfloat16
 )
 
@@ -79,9 +77,6 @@ trainer = SFTTrainer(
     model=model,
     train_dataset=dataset,
     args=training_args,
-    dataset_text_field="messages", 
-    max_seq_length=4096, 
-    packing=False,
 )
 
 # --- 6. START TRAINING ---
