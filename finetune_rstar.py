@@ -46,8 +46,8 @@ dataset = dataset.map(format_rstar_to_chat)
 # --- 3. TRAINING ARGUMENTS ---
 training_args = TrainingArguments(
     output_dir=OUTPUT_DIR,
-    num_train_epochs=1,
-    per_device_train_batch_size=4,  # DeepSpeed will shard this
+    num_train_epochs=5,
+    per_device_train_batch_size=1,  # DeepSpeed will shard this
     gradient_accumulation_steps=4,  # Total batch size = 32
     learning_rate=2e-5,
     weight_decay=0.01,
@@ -69,8 +69,8 @@ tokenizer.pad_token = tokenizer.eos_token
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    use_cache=False,
-    attn_implementation="flash_attention_2", 
+    use_cache=True,
+    attn_implementation="sdpa",
     torch_dtype=torch.bfloat16
 )
 
