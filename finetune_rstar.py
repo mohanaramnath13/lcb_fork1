@@ -13,7 +13,7 @@ OUTPUT_DIR = "Qwen2.5-Coder-7B-rStar-Full"
 
 # --- 2. LOAD DATASET ---
 print("Loading microsoft/rStar-Coder (synthetic_sft)...")
-dataset = load_dataset("microsoft/rStar-Coder", "synthetic_sft", split="train")
+dataset = load_dataset("microsoft/rStar-Coder", "synthetic_sft", split="train[:20%]")
 
 def format_rstar_to_chat(row):
     # --- A. Prepare User Prompt ---
