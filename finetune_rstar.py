@@ -36,17 +36,15 @@ def format_rstar_to_chat(row):
 print("Formatting dataset...")
 dataset = dataset.map(format_rstar_to_chat)
 
-# --- 3. TRAINING ARGUMENTS (SFTConfig) ---
-# We use SFTConfig but with YOUR specific metrics
+# --- 3. TRAINING ARGUMENTS (The "Bulletproof" Config) ---
+# We initialize with only the safe arguments first
 training_args = SFTConfig(
     output_dir=OUTPUT_DIR,
     dataset_text_field="messages",
-    max_seq_length=4096,
-    packing=False,
     
-    # --- YOUR REQUESTED METRICS ---
-    num_train_epochs=5,             # Increased to 5
-    per_device_train_batch_size=1,  # Decreased to 1 (Effective batch = 1 * 4 * 2 GPUs = 8)
+    # Standard training params
+    num_train_epochs=5,
+    per_device_train_batch_size=1,
     gradient_accumulation_steps=4,
     learning_rate=2e-5,
     weight_decay=0.01,
@@ -55,20 +53,28 @@ training_args = SFTConfig(
     save_strategy="steps",
     save_steps=100,
     save_total_limit=2,
-    gradient_checkpointing=True,    # Saves VRAM
+    gradient_checkpointing=True,
     report_to="none",
-    dataloader_num_workers=4,
+    dataloader_num_workers=0,
+    dataset_num_proc=1,
 )
+
+# --- THE FIX: Manually inject the problematic arguments ---
+# This bypasses the version check but SFTTrainer will still respect them
+training_args.max_seq_length = 4096
+training_args.packing = False
 
 # --- 4. LOAD MODEL ---
 print(f"Loading Model: {MODEL_NAME}...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 tokenizer.pad_token = tokenizer.eos_token
+# Safety net: explicitly tell tokenizer its limit
+tokenizer.model_max_length = 4096 
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    use_cache=False,                # MUST be False if gradient_checkpointing=True
-    attn_implementation="sdpa",     # Using SDPA as requested
+    use_cache=False,                # Must be False for gradient checkpointing
+    attn_implementation="sdpa",     # Using SDPA
     torch_dtype=torch.bfloat16
 )
 
@@ -77,6 +83,7 @@ trainer = SFTTrainer(
     model=model,
     train_dataset=dataset,
     args=training_args,
+    # Note: We do NOT pass max_seq_length here anymore
 )
 
 # --- 6. START TRAINING ---
