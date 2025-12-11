@@ -13,7 +13,7 @@ OUTPUT_DIR = "Qwen2.5-Coder-7B-rStar-Full"
 
 # --- 2. LOAD DATASET ---
 print("Loading microsoft/rStar-Coder (synthetic_sft)...")
-dataset = load_dataset("microsoft/rStar-Coder", "synthetic_sft", split="train[:20%]")
+dataset = load_dataset("microsoft/rStar-Coder", "synthetic_sft", split="train[:5000]")
 
 def format_rstar_to_chat(row):
     # --- A. Prepare User Prompt ---
@@ -43,9 +43,9 @@ training_args = SFTConfig(
     dataset_text_field="messages",
     
     # Standard training params
-    num_train_epochs=5,
+    num_train_epochs=1,
     per_device_train_batch_size=1,
-    gradient_accumulation_steps=4,
+    gradient_accumulation_steps=1,
     learning_rate=2e-5,
     weight_decay=0.01,
     bf16=True,
