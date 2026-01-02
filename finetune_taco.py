@@ -6,6 +6,7 @@ from transformers import (
     AutoModelForCausalLM,
 )
 from trl import SFTTrainer, SFTConfig
+from peft import LoraConfig, TaskType
 
 # --- 1. CONFIGURATION ---
 MODEL_NAME = "deepseek-ai/deepseek-coder-1.3b-instruct"
@@ -45,9 +46,9 @@ training_args = SFTConfig(
     
     # Standard training params
     num_train_epochs=1,
-    per_device_train_batch_size=1,
+    per_device_train_batch_size=4,
     gradient_accumulation_steps=1,
-    learning_rate=2e-5,
+    learning_rate=2e-4,
     weight_decay=0.01,
     bf16=True,
     logging_steps=10,
@@ -79,19 +80,38 @@ model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.bfloat16
 )
 
-# --- 5. INITIALIZE TRAINER ---
+# --- 5. [NEW] CONFIGURE LoRA ---
+peft_config = LoraConfig(
+    r=16,                        # Rank
+    lora_alpha=32,               # Alpha (usually 2x rank)
+    lora_dropout=0.05,           # Dropout
+    bias="none",                 # Bias setting
+    task_type="CAUSAL_LM",       # Task type
+    target_modules=[             # Target all linear layers for best performance
+        "q_proj", 
+        "k_proj", 
+        "v_proj", 
+        "o_proj", 
+        "gate_proj", 
+        "up_proj", 
+        "down_proj"
+    ],
+)
+
+# --- 6. INITIALIZE TRAINER ---
 trainer = SFTTrainer(
     model=model,
     train_dataset=dataset,
     args=training_args,
     # Note: We do NOT pass max_seq_length here anymore
+    peft_config=peft_config,     # [NEW] Pass the LoRA config here
 )
 
-# --- 6. START TRAINING ---
+# --- 7. START TRAINING ---
 print("Starting DeepSpeed training...")
 trainer.train()
 
-# --- 7. SAVE FINAL MODEL ---
+# --- 8. SAVE FINAL MODEL ---
 print("Saving final model...")
 trainer.save_model(OUTPUT_DIR)
 tokenizer.save_pretrained(OUTPUT_DIR)
