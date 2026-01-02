@@ -8,8 +8,8 @@ from transformers import (
 from trl import SFTTrainer, SFTConfig
 
 # --- 1. CONFIGURATION ---
-MODEL_NAME = "Qwen/Qwen2.5-Coder-7B-Instruct"
-OUTPUT_DIR = "Qwen2.5-Coder-7B-Instruct-rStar-I2O-2000"
+MODEL_NAME = "deepseek-ai/deepseek-coder-1.3b-instruct"
+OUTPUT_DIR = "deepseek-coder-1.3b-instruct-rStar-I2O-2000"
 
 # --- 2. LOAD DATASET ---
 print("Loading microsoft/rStar-Coder (synthetic_sft)...")
