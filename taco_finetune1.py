@@ -11,8 +11,8 @@ from peft import LoraConfig, TaskType
 import pdb
 
 # --- 1. CONFIGURATION ---
-MODEL_NAME = "deepseek-ai/deepseek-coder-1.3b-instruct"
-OUTPUT_DIR = "finetuned-models/adapter-weights/deepseek-coder-1.3b-instruct-taco-I2O-2000x2-lora-adapter-weights"
+MODEL_NAME = "Qwen/Qwen2.5-Coder-7B-Instruct"
+OUTPUT_DIR = "finetuned-models/adapter-weights/Qwen/Qwen2.5-Coder-7B-Instruct-taco-I2O-2000x2-lora-adapter-weights"
 
 # --- 2. LOAD DATASET ---
 print("Loading TACO dataset...")
@@ -74,7 +74,7 @@ training_args = SFTConfig(
     
     # Standard training params
     num_train_epochs=2,
-    per_device_train_batch_size=4,
+    per_device_train_batch_size=1,
     gradient_accumulation_steps=1,
     learning_rate=2e-4,
     weight_decay=0.01,
